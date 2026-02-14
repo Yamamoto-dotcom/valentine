@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="robots" content="noindex,nofollow" />
+<title>GIFT GACHA</title>
+
+<style>
+  :root {
+    --bg-color: #1a0b2e;
+    --primary: #ffd700;
+    --accent: #ff0055;
+    --box-body: #d12e2e;
+    --box-lid: #ff4d4d;
+    --ribbon: #ffd700;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle at 50% 50%, #2d1b4e 0%, #1a0b2e 100%);
+    color: white;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bg-particle {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: floatUp linear infinite;
+    z-index: 0;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    50% { opacity: 0.5; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  #gacha-container {
+    position: relative;
+    width: 300px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .box-wrapper {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin-bottom: 40px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .box-body {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100px;
+    background: var(--box-body);
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    z-index: 5;
+  }
+  .box-body::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 100%;
+    background: var(--ribbon);
+  }
+
+  .box-lid {
+    position: absolute;
+    top: 30px;
+    width: 110%;
+    left: -5%;
+    height: 40px;
+    background: var(--box-lid);
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 6;
+    transform-origin: top center;
+  }
+  .box-lid::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 100%;
+    background: var(--ribbon);
+  }
+  .box-lid::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 10px;
+    background: rgba(0,0,0,0.1);
+  }
+
+  .box-light {
+    position: absolute;
+    bottom: 50px;
+    left: 10%;
+    width: 80%;
+    height: 10px;
+    background: white;
+    box-shadow: 0 0 20px 10px white, 0 0 50px 20px gold;
+    opacity: 0;
+    z-index: 4;
+    transition: opacity 0.5s;
+  }
+
+  .shaking { animation: shake 0.5s ease-in-out infinite; }
+  @keyframes shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(5deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .opening .box-lid { animation: openLid 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes openLid {
+    0% { transform: translateY(0) rotateX(0); }
+    100% { transform: translateY(-60px) rotateX(120deg); opacity: 0; }
+  }
+
+  .opening.ssr .box-light {
+    opacity: 1;
+    box-shadow: 0 0 30px 15px white, 0 0 60px 30px #ff00de, 0 0 100px 50px cyan;
+    animation: rainbowFlash 1s infinite alternate;
+  }
+  @keyframes rainbowFlash {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+  }
+
+  .btn-gacha {
+    background: linear-gradient(135deg, #ff6b6b, #ff0055);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 50px;
+    box-shadow: 0 5px 15px rgba(255, 0, 85, 0.4);
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.2s;
+    outline: none;
+  }
+  .btn-gacha:active { transform: scale(0.95); }
+  .btn-gacha:disabled {
+    background: #555;
+    box-shadow: none;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+  }
+
+  #result-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+    z-index: 20;
+  }
+  #result-overlay.show { opacity: 1; pointer-events: auto; }
+
+  .result-card {
+    background: white;
+    width: 280px;
+    max-height: 82vh;
+    overflow: auto;
+    padding: 18px;
+    border-radius: 15px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: scale(0.8);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  #result-overlay.show .result-card { transform: scale(1); }
+
+  .card-title { font-size: 1.5rem; margin: 10px 0; font-weight: bold; }
+  .ssr-title {
+    background: linear-gradient(90deg, #ff0055, #ffcc00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .prize-img {
+    width: 100%;
+    max-width: 260px;
+    border-radius: 12px;
+    margin: 10px auto;
+    display: block;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  }
+  .hint {
+    font-size: 0.82rem;
+    color: #666;
+    margin: 6px 0 0;
+    line-height: 1.3;
+  }
+
+  .qr-generated {
+    width: 180px;
+    height: 180px;
+    margin: 12px auto 6px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .voucher-meta {
+    font-size: 0.92rem;
+    margin-top: 8px;
+    background: #f6f6f6;
+    border-radius: 12px;
+    padding: 10px 12px;
+    text-align: left;
+  }
+  .voucher-meta b { color: #111; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+  .copy-btn {
+    width: 100%;
+    margin-top: 10px;
+    background: #111;
+    color: #fff;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .close-btn {
+    margin-top: 14px;
+    background: #333;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+
+  .particle { position: absolute; pointer-events: none; animation: confetti 1s ease-out forwards; }
+  @keyframes confetti {
+    0% { transform: translate(0,0) rotate(0); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+
+<body>
+<div id="bg-particles"></div>
+
+<div id="gacha-container">
+  <div class="box-wrapper" id="box">
+    <div class="box-light"></div>
+    <div class="box-lid"></div>
+    <div class="box-body"></div>
+  </div>
+  <button class="btn-gacha" id="btn-draw" onclick="drawGacha()">ガチャを引く</button>
+</div>
+
+<div id="result-overlay">
+  <div class="result-card" id="result-card">
+    <h2 class="card-title" id="result-title">Title</h2>
+    <div id="result-content"></div>
+    <button class="close-btn" onclick="resetGacha()">閉じる</button>
+  </div>
+</div>
+
+<!-- 本物のQR生成（CDN） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+  /* =========================
+     速攻ローンチ用の設定
+     ========================= */
+
+  // SSR確率（10%）
+  const SSR_RATE = 0.10;
+
+  // 「ハマり防止」：この回数までに当たりが出なければ強制SSR（例: 15回）
+  const GUARANTEE_TRIES = 15;
+
+  // ★あなたの券番号（画像のQRがこれを返してた）
+  const VOUCHER_CODE = "781922201001478";
+  const EXPIRY_DATE  = "2026-05-15";
+
+  // SSRで見せたい画像（同じフォルダに置く）
+  const SSR_IMAGES = [
+    { src: "egift_qr.jpeg",   alt: "E-Gift Voucher QR" },
+    { src: "godiva_100.jpeg", alt: "GODIVA HK$100 Cash Voucher" }
+  ];
+
+  // （任意）リンク直打ちガード：空なら無効。使うなら長めのランダム文字列にして、URLに ?k=それ を付けて送る
+  const LINK_KEY = ""; // 例: "9c3a2f7d1b4e8aa6"
+
+  const TEXT_LOSE = "残念…ハズレ<br>もう一回挑戦しよう！";
+  const TEXT_WIN  = "おめでとう！<br>GIFTを獲得しました！<br><span class='hint'>店でこのQRを見せればOK。</span>";
+
+  /* =========================
+     DOM
+     ========================= */
+  const box = document.getElementById('box');
+  const btnDraw = document.getElementById('btn-draw');
+  const overlay = document.getElementById('result-overlay');
+  const resultTitle = document.getElementById('result-title');
+  const resultContent = document.getElementById('result-content');
+  const bgContainer = document.getElementById('bg-particles');
+
+  /* =========================
+     簡易ガード（任意）
+     ========================= */
+  function enforceKey() {
+    if (!LINK_KEY) return true;
+    const k = new URLSearchParams(location.search).get("k");
+    if (k !== LINK_KEY) {
+      document.body.innerHTML = "<div style='color:#fff;font-family:Arial;padding:40px;text-align:center'>リンクが違うか期限切れ。</div>";
+      return false;
+    }
+    return true;
+  }
+  enforceKey();
+
+  /* =========================
+     背景粒
+     ========================= */
+  for (let i = 0; i < 30; i++) {
+    let p = document.createElement('div');
+    p.className = 'bg-particle';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.width = (Math.random() * 5 + 2) + 'px';
+    p.style.height = p.style.width;
+    p.style.animationDuration = (Math.random() * 5 + 5) + 's';
+    p.style.animationDelay = (Math.random() * 5) + 's';
+    bgContainer.appendChild(p);
+  }
+
+  /* =========================
+     ガチャ
+     ========================= */
+  let isAnimating = false;
+  let tries = 0;
+  let hasWon = false;
+
+  function drawGacha() {
+    if (isAnimating) return;
+
+    // 1回SSRを引いたら、以降は「もう一度見る」扱いでSSR結果だけ即表示にしてもいい
+    // ここでは「当たったら次からは必ずSSR」にしておく（彼女が迷わない）
+    if (hasWon) {
+      showResult(true);
+      return;
+    }
+
+    isAnimating = true;
+    btnDraw.disabled = true;
+
+    tries++;
+    const isSSR = (Math.random() < SSR_RATE) || (tries >= GUARANTEE_TRIES);
+
+    box.classList.add('shaking');
+
+    setTimeout(() => {
+      box.classList.remove('shaking');
+      box.classList.add('opening');
+
+      if (isSSR) {
+        box.classList.add('ssr');
+        spawnConfetti();
+        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+      }
+
+      setTimeout(() => showResult(isSSR), 1000);
+    }, 1500);
+  }
+
+  function showResult(isSSR) {
+    overlay.classList.add('show');
+
+    if (isSSR) {
+      hasWon = true;
+
+      resultTitle.innerHTML = "SSR GET!!";
+      resultTitle.className = "card-title ssr-title";
+
+      resultContent.innerHTML = `
+        <img class="prize-img" src="${SSR_IMAGES[0].src}" alt="${SSR_IMAGES[0].alt}">
+        <p class="hint">※スキャンしづらい時は下の「生成QR」を使ってね（同じ番号）。</p>
+
+        <div class="qr-generated" id="qr-code"></div>
+
+        <div class="voucher-meta">
+          <div><b>Voucher No.</b> <span class="mono" id="voucherText">${VOUCHER_CODE}</span></div>
+          <div style="margin-top:6px;"><b>Expiry</b> <span class="mono">${EXPIRY_DATE}</span></div>
+          <button class="copy-btn" onclick="copyVoucher()">番号をコピー</button>
+          <div class="hint">（iPhoneなら明るさMAXで店員に見せると通りやすい）</div>
+        </div>
+
+        <img class="prize-img" src="${SSR_IMAGES[1].src}" alt="${SSR_IMAGES[1].alt}">
+        <p style="margin-top:8px;">${TEXT_WIN}</p>
+      `;
+
+      // 生成QR（スキャン可能）
+      const qrEl = document.getElementById("qr-code");
+      qrEl.innerHTML = ""; // 念のため掃除
+      new QRCode(qrEl, {
+        text: VOUCHER_CODE,
+        width: 180,
+        height: 180,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // ボタン文言を変える（当たった後の迷い防止）
+      btnDraw.innerText = "ギフトを見る";
+      btnDraw.disabled = false;
+      isAnimating = false;
+
+    } else {
+      resultTitle.innerHTML = "LOSE...";
+      resultTitle.className = "card-title";
+      resultContent.innerHTML = `
+        <div style="font-size:3rem; margin:20px;">😢</div>
+        <p>${TEXT_LOSE}</p>
+      `;
+    }
+  }
+
+  async function copyVoucher() {
+    try {
+      await navigator.clipboard.writeText(VOUCHER_CODE);
+      alert("コピーした！");
+    } catch (e) {
+      // iOSで失敗したら最終手段
+      prompt("これをコピーしてね", VOUCHER_CODE);
+    }
+  }
+
+  function resetGacha() {
+    overlay.classList.remove('show');
+    box.classList.remove('opening', 'ssr');
+    isAnimating = false;
+
+    if (!hasWon) {
+      btnDraw.disabled = false;
+      btnDraw.innerText = "ガチャを引く";
+    } else {
+      // 当たった後は「ギフトを見る」状態で維持（迷わない）
+      btnDraw.disabled = false;
+      btnDraw.innerText = "ギフトを見る";
+    }
+  }
+
+  function spawnConfetti() {
+    const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];
+    for (let i = 0; i < 50; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      p.style.width = '8px';
+      p.style.height = '8px';
+      p.style.left = '50%';
+      p.style.top = '50%';
+
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 100 + Math.random() * 200;
+      p.style.setProperty('--tx', (Math.cos(angle) * dist) + 'px');
+      p.style.setProperty('--ty', (Math.sin(angle) * dist) + 'px');
+
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1000);
+    }
+  }
+</script>
+</body>
+</html>
